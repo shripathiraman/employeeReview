@@ -11,7 +11,7 @@ from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import service
+import backend.services as services
 
 
 class FakeRaiseException(Exception):
@@ -35,7 +35,7 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.calculate_average_rating.
         Scenario: averages three ratings and rounds to two decimals.
         """
-        result = service.calculate_average_rating(
+        result = services.calculate_average_rating(
             {"quality_rating": 4, "delivery_rating": 5, "teamwork_rating": 4}
         )
 
@@ -46,7 +46,7 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.get_employees.
         Scenario: returns the employee list from the repository.
         """
-        self.assertEqual(service.get_employees(), [{"id": 1}])
+        self.assertEqual(services.get_employees(), [{"id": 1}])
         list_employees.assert_called_once_with()
 
     @patch("service.repository.list_employees", side_effect=RuntimeError("database down"))
@@ -54,14 +54,14 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.get_employees.
         Scenario: maps a repository failure to HTTP 503.
         """
-        self.assert_http_error(service.get_employees, 503, "database down")
+        self.assert_http_error(services.get_employees, 503, "database down")
 
     @patch("service.repository.list_review_periods", return_value=[{"id": 2}])
     def test_get_review_periods(self, list_review_periods) -> None:
         """Service method: service.get_review_periods.
         Scenario: returns review periods from the repository.
         """
-        self.assertEqual(service.get_review_periods(), [{"id": 2}])
+        self.assertEqual(services.get_review_periods(), [{"id": 2}])
         list_review_periods.assert_called_once_with()
 
     @patch("service.repository.list_review_periods", side_effect=RuntimeError("database down"))
@@ -69,14 +69,14 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.get_review_periods.
         Scenario: maps a repository failure to HTTP 503.
         """
-        self.assert_http_error(service.get_review_periods, 503, "database down")
+        self.assert_http_error(services.get_review_periods, 503, "database down")
 
     @patch("service.repository.list_reviews", return_value=[{"id": 3}])
     def test_get_reviews(self, list_reviews) -> None:
         """Service method: service.get_reviews.
         Scenario: forwards filters and pagination and returns reviews.
         """
-        result = service.get_reviews(employee_id=None, period_id=None, limit=10, offset=0)
+        result = services.get_reviews(employee_id=None, period_id=None, limit=10, offset=0)
 
         self.assertEqual(result, [{"id": 3}])
         list_reviews.assert_called_once_with(
@@ -89,7 +89,7 @@ class ServiceUnitTests(unittest.TestCase):
         Scenario: maps a repository failure to HTTP 503.
         """
         self.assert_http_error(
-            lambda: service.get_reviews(
+            lambda: services.get_reviews(
                 employee_id=None, period_id=None, limit=10, offset=0
             ),
             503,
@@ -101,7 +101,7 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.get_review.
         Scenario: returns the review matching the supplied ID.
         """
-        self.assertEqual(service.get_review(4), {"id": 4})
+        self.assertEqual(services.get_review(4), {"id": 4})
         get_review.assert_called_once_with(4)
 
     @patch("service.repository.get_review", return_value=None)
@@ -109,14 +109,14 @@ class ServiceUnitTests(unittest.TestCase):
         """Service method: service.get_review.
         Scenario: raises HTTP 404 when the requested review is absent.
         """
-        self.assert_http_error(lambda: service.get_review(4), 404, "Review not found")
+        self.assert_http_error(lambda: services.get_review(4), 404, "Review not found")
 
     @patch("service.repository.get_review", side_effect=RuntimeError("database down"))
     def test_get_review_database_error(self, _get_review) -> None:
         """Service method: service.get_review.
         Scenario: maps a repository failure for the requested ID to HTTP 503.
         """
-        self.assert_http_error(lambda: service.get_review(4), 503, "database down")
+        self.assert_http_error(lambda: services.get_review(4), 503, "database down")
 
     @patch("service.repository.create_review", return_value={"id": 5})
     def test_submit_review_calculates_average(self, create_review) -> None:
@@ -131,7 +131,7 @@ class ServiceUnitTests(unittest.TestCase):
             "teamwork_rating": 4,
         }
 
-        self.assertEqual(service.submit_review(review_data), {"id": 5})
+        self.assertEqual(services.submit_review(review_data), {"id": 5})
         create_review.assert_called_once_with({**review_data, "average_rating": 4.33})
 
     @patch(
@@ -143,7 +143,7 @@ class ServiceUnitTests(unittest.TestCase):
         Scenario: maps a foreign-key failure to HTTP 404.
         """
         self.assert_http_error(
-            lambda: service.submit_review(self._review_data()),
+            lambda: services.submit_review(self._review_data()),
             404,
             "Employee or review period was not found",
         )
@@ -157,7 +157,7 @@ class ServiceUnitTests(unittest.TestCase):
         Scenario: maps a duplicate review failure to HTTP 409.
         """
         self.assert_http_error(
-            lambda: service.submit_review(self._review_data()),
+            lambda: services.submit_review(self._review_data()),
             409,
             "This employee already has a review for that period",
         )
@@ -169,7 +169,7 @@ class ServiceUnitTests(unittest.TestCase):
         Scenario: maps a closed review period database error to HTTP 422.
         """
         self.assert_http_error(
-            lambda: service.submit_review(self._review_data()),
+            lambda: services.submit_review(self._review_data()),
             422,
             "Review period is closed",
         )
@@ -180,7 +180,7 @@ class ServiceUnitTests(unittest.TestCase):
         Scenario: maps a repository failure to HTTP 503.
         """
         self.assert_http_error(
-            lambda: service.submit_review(self._review_data()),
+            lambda: services.submit_review(self._review_data()),
             503,
             "database down",
         )
