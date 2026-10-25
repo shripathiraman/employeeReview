@@ -71,7 +71,7 @@ def get_review_by_id(review_id: int):
         from database import get_database_connection
         with get_database_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM performance_reviews WHERE review_id = %s;", (review_id,))
+                cur.execute("SELECT * FROM performance_reviews WHERE period_id = %s;", (review_id,))
                 row = cur.fetchone()
                 if row is None:
                     raise ValueError(f"Review with ID {review_id} not found.")

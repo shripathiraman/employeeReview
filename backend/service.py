@@ -1,12 +1,8 @@
 from repository import (
-    create_review,
-    get_employee_by_id,
     get_employees,
     get_review_by_id,
-    get_review_period_by_id,
     get_review_periods,
-    get_reviews,
-    review_exists,
+    submit_review as save_review,
 )
 
 
@@ -40,6 +36,13 @@ def _calculate_average(quality, delivery, teamwork):
     return round((quality + delivery + teamwork) / 3, 2)
 
 
+def _find_by_id(rows, row_id):
+    for row in rows:
+        if row["id"] == row_id:
+            return row
+    return None
+
+
 def list_employees():
     return get_employees()
 
@@ -48,15 +51,8 @@ def list_review_periods():
     return get_review_periods()
 
 
-def list_reviews(employee_id=None, period_id=None):
-    return get_reviews(employee_id=employee_id, period_id=period_id)
-
-
 def get_review_details(review_id):
-    review = get_review_by_id(review_id)
-    if review is None:
-        raise NotFoundError(f"Review {review_id} not found")
-    return review
+    return get_review_by_id(review_id)
 
 
 def submit_review(data):
@@ -64,10 +60,10 @@ def submit_review(data):
     period_id = data.get("period_id")
     comments = data.get("comments")
 
-    if get_employee_by_id(employee_id) is None:
+    if _find_by_id(get_employees(), employee_id) is None:
         raise NotFoundError(f"Employee {employee_id} not found")
 
-    period = get_review_period_by_id(period_id)
+    period = _find_by_id(get_review_periods(), period_id)
     if period is None:
         raise NotFoundError(f"Review period {period_id} not found")
     if period["status"] != "Open":
@@ -79,16 +75,11 @@ def submit_review(data):
     if not comments or not str(comments).strip():
         raise ValidationError("comments is required")
 
-    if review_exists(employee_id, period_id):
-        raise ConflictError(
-            f"Employee {employee_id} already has a review for period {period_id}"
-        )
-
     quality = data["quality_rating"]
     delivery = data["delivery_rating"]
     teamwork = data["teamwork_rating"]
 
-    return create_review(
+    return save_review(
         {
             "employee_id": employee_id,
             "period_id": period_id,
