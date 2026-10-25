@@ -6,6 +6,7 @@ from models import (
     EmployeeUpsert,
     ReviewCreate,
     ReviewPeriodResponse,
+    ReviewPeriodUpsert,
     ReviewResponse,
 )
 
@@ -82,3 +83,21 @@ def read_employee(employee_id: str):
 )
 def save_employee(employee: EmployeeUpsert):
     return services.upsert_employee(employee.model_dump())
+
+
+@router.get(
+    "/review-periods/{period_id}",
+    response_model=ReviewPeriodResponse,
+    tags=["Review periods"],
+)
+def read_review_period(period_id: int):
+    return services.get_review_period(period_id)
+
+
+@router.post(
+    "/review-periods",
+    response_model=ReviewPeriodResponse,
+    tags=["Review periods"],
+)
+def save_review_period(period: ReviewPeriodUpsert):
+    return services.upsert_review_period(period.model_dump())

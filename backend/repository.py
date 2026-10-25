@@ -235,3 +235,80 @@ def upsert_employee(employee: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to save employee.",
         ) from exc
+
+
+def get_review_period(period_id: str) -> dict[str, Any] | None:
+    """Find one Review Period using their Period id"""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name, start_date, end_date, status
+                    FROM review_periods
+                    WHERE id = %s
+                    """,
+                    (period_id,),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve review period.",
+        ) from exc
+
+
+def upsert_review_period(period: dict[str, Any]) -> dict[str, Any]:
+    """Insert a period when id is absent, or update it when id is present."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                if period["id"] is None:
+                    cursor.execute(
+                        """
+                        INSERT INTO review_periods (name, start_date, end_date, status)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id, name, start_date, end_date, status
+                        """,
+                        (
+                            period["name"],
+                            period["start_date"],
+                            period["end_date"],
+                            period["status"],
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE review_periods
+                        SET name = %s,
+                            start_date = %s,
+                            end_date = %s,
+                            status = %s
+                        WHERE id = %s
+                        RETURNING id, name, start_date, end_date, status
+                        """,
+                        (
+                            period["name"],
+                            period["start_date"],
+                            period["end_date"],
+                            period["status"],
+                            period["id"],
+                        ),
+                    )
+
+                    saved_period = cursor.fetchone()
+                    if saved_period is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Review period not found.",
+                        )
+                    return saved_period
+
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save review period.",
+        ) from exc
+

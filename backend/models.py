@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EmployeeResponse(BaseModel):
@@ -70,3 +70,16 @@ class EmployeeUpsert(BaseModel):
     status: str = Field(default="Active", max_length=20)
 
 
+class ReviewPeriodUpsert(BaseModel):
+    # Leave id out to create a new period. Include it to update an existing one.
+    id: int | None = Field(default=None, gt=0)
+    name: str = Field(min_length=1, max_length=50)
+    start_date: date
+    end_date: date
+    status: str = Field(default="Open", max_length=20)
+
+    @model_validator(mode="after")
+    def check_date_order(self):
+        if self.end_date < self.start_date:
+            raise ValueError("end_date must be on or after start_date")
+        return self

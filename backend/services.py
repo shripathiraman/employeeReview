@@ -105,3 +105,21 @@ def upsert_employee(employee_data: dict):
         return repository.upsert_employee(employee_data)
     except (psycopg.OperationalError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def get_review_period(period_id: int):
+    """Return one review period or raise a 404 error if it does not exist."""
+    period = repository.get_review_period(period_id)
+
+    if period is None:
+        raise HTTPException(status_code=404, detail="Review period not found.")
+
+    return period
+
+
+def upsert_review_period(period_data: dict):
+    """Insert or update a review period."""
+    try:
+        return repository.upsert_review_period(period_data)
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
