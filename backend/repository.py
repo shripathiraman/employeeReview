@@ -3,7 +3,11 @@ from typing import Any
 
 import psycopg
 from fastapi import HTTPException, status
+from dotenv import load_dotenv
 from psycopg.rows import dict_row
+
+
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 
 def _connect() -> psycopg.Connection:
