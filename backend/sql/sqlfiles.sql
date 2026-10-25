@@ -30,9 +30,7 @@ CREATE TABLE performance_reviews (
     quality_rating   INTEGER NOT NULL CHECK (quality_rating BETWEEN 1 AND 5),
     delivery_rating  INTEGER NOT NULL CHECK (delivery_rating BETWEEN 1 AND 5),
     teamwork_rating  INTEGER NOT NULL CHECK (teamwork_rating BETWEEN 1 AND 5),
-    average_rating   NUMERIC(3,2) GENERATED ALWAYS AS (
-        (quality_rating + delivery_rating + teamwork_rating)::NUMERIC / 3
-    ) STORED,
+    average_rating   NUMERIC(3,2),
     comments         TEXT,
     created_at       TIMESTAMP DEFAULT NOW(),
 
