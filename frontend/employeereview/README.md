@@ -1,5 +1,14 @@
 # React + TypeScript + Vite
 
+## Unit tests
+
+Frontend unit tests use Vitest with a jsdom environment and React Testing Library.
+Run them from this directory with:
+
+```sh
+npm test
+```
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
