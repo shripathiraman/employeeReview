@@ -2,8 +2,8 @@ import psycopg2
 import os
 from dotenv import load_dotenv
 
-#load_dotenv() loads environment variables from a .env file into your Python application's environment.
-load_dotenv()   
+# load_dotenv() loads environment variables from the backend .env file.
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 
 def get_database_connection():
@@ -28,7 +28,8 @@ def test_database_connection() -> bool:
             if is_connected:
                 print("DB successful connection")
             return is_connected
-    except psycopg2.Error:
+    except psycopg2.Error as error:
+        print(f"DB connection failed: {error}")
         return False
     finally:
         if connection is not None:
