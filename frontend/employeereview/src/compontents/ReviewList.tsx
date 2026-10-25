@@ -1,3 +1,7 @@
+
+import { useState } from 'react'
+import Pagination from './Pagination'
+
 type Review = {
   employeeId: string
   employeeName: string
@@ -16,6 +20,22 @@ const reviews: Review[] = [
 ]
 
 function ReviewList() {
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const pageSize = 3
+  const totalReviews = reviews.length
+  const totalPages = Math.ceil(totalReviews / pageSize)
+
+  const startIndex = (currentPage - 1) * pageSize
+
+  const paginatedReviews = reviews.slice(
+    startIndex,
+    startIndex + pageSize
+  )
+
+  const firstReview = totalReviews === 0 ? 0 : startIndex + 1
+  const lastReview = Math.min(startIndex + pageSize, totalReviews)
+
   return (
     <div className="reviews-page">
       <div className="review-filters" aria-label="Review filters">
@@ -27,6 +47,7 @@ function ReviewList() {
             <option value="h2-2025">H2 2025</option>
           </select>
         </label>
+
         <label>
           <span>Employee<em>*</em></span>
           <select defaultValue="all">
@@ -37,6 +58,7 @@ function ReviewList() {
             <option value="priya-sharma">Priya Sharma</option>
           </select>
         </label>
+
         <button className="review-search-button" type="button">
           <span aria-hidden="true">⌕</span> Search
         </button>
@@ -60,16 +82,27 @@ function ReviewList() {
                 <th>Action</th>
               </tr>
             </thead>
+
             <tbody>
-              {reviews.map((review, index) => (
-                <tr key={`${review.employeeId}-${review.period}-${index}`}>
+              {paginatedReviews.map((review, index) => (
+                <tr key={`${review.employeeId}-${review.period}-${startIndex + index}`}>
                   <td>{review.employeeId}</td>
                   <td>{review.employeeName}</td>
                   <td>{review.period}</td>
                   <td>{review.ratings}</td>
                   <td>{review.average}</td>
-                  <td><span className={`review-status ${review.status.toLowerCase()}`}>{review.status}</span></td>
-                  <td><button className="review-view-button" type="button">View</button></td>
+                  <td>
+                    <span
+                      className={`review-status ${review.status.toLowerCase()}`}
+                    >
+                      {review.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="review-view-button" type="button">
+                      View
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -77,14 +110,15 @@ function ReviewList() {
         </div>
 
         <footer className="review-list-footer">
-          <span>Showing 1 to 5 of 12 reviews</span>
-          <nav className="review-pagination" aria-label="Review pages">
-            <button type="button" aria-label="Previous page">‹</button>
-            <button className="current" type="button" aria-current="page">1</button>
-            <button type="button">2</button>
-            <button type="button">3</button>
-            <button type="button" aria-label="Next page">›</button>
-          </nav>
+          <span>
+            Showing {firstReview} to {lastReview} of {totalReviews} reviews
+          </span>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </footer>
       </section>
     </div>
