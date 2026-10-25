@@ -86,8 +86,8 @@ function EmployeeForm({ employeeId, onCancel, onSaved }: EmployeeFormProps) {
   const getFieldError = (field: keyof EmployeeFormValues): string | undefined => {
     if (field === 'employee_id' && !form.employee_id.trim()) return 'Please enter an employee ID.'
     if (field === 'name' && !form.name.trim()) return 'Please enter the employee name.'
-    if (field === 'email' && form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
-      return 'Please enter a valid email address.'
+    if (field === 'email' && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        return 'Please enter a valid email address.'
     }
     if (field === 'status' && !form.status) return 'Please select a status.'
     return undefined

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, EmailStr
 
 
 class EmployeeResponse(BaseModel):
@@ -66,7 +66,7 @@ class EmployeeUpsert(BaseModel):
     employee_id: str = Field(min_length=1, max_length=20)
     name: str = Field(min_length=1, max_length=100)
     department: str | None = Field(default=None, max_length=100)
-    email: str | None = Field(default=None, max_length=100)
+    email: EmailStr | None = Field(default=None, max_length=100)
     status: str = Field(default="Active", max_length=20)
 
 
