@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useEmployees, useReviewPeriods, useReviews } from '../hooks/useResources'
+import { usePagination } from '../hooks/usePagination'
 import type { Review as ApiReview } from '../api/resources'
 import type { Review } from './ReviewDetail'
+import Pagination from './Pagination'
 
 type ReviewListProps = {
   onView: (review: Review) => void
@@ -28,17 +30,23 @@ function ReviewList({ onView }: ReviewListProps) {
   const employees = useEmployees()
   const reviewPeriods = useReviewPeriods()
   const { data, isLoading, error } = useReviews(searchedEmployeeId, searchedPeriodId)
-  const reviews = data?.map((review) => {
+  const allReviews = data?.map((review) => {
     // Review.employee_id is the database ID; show the employee code instead.
     const employeeCode = employees.data?.find((employee) => employee.id === review.employee_id)?.employee_id
       ?? String(review.employee_id)
     return mapReview(review, employeeCode)
   }) ?? []
+  const pagination = usePagination(allReviews.length, 5)
+  const reviews = allReviews.slice(
+    pagination.startIndex,
+    pagination.startIndex + pagination.pageSize,
+  )
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSearchedEmployeeId(employeeFilter === 'all' ? undefined : Number(employeeFilter))
     setSearchedPeriodId(periodFilter === 'all' ? undefined : Number(periodFilter))
+    pagination.resetPage()
   }
 
   return (
@@ -112,20 +120,22 @@ function ReviewList({ onView }: ReviewListProps) {
                   <td><button className="review-view-button" type="button" onClick={() => onView(review)}>View</button></td>
                 </tr>
               ))}
+              {!isLoading && !error && reviews.length === 0 && (
+                <tr>
+                  <td colSpan={7}>No reviews found.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        <footer className="review-list-footer">
-          <span>Showing {reviews.length} review{reviews.length === 1 ? '' : 's'}</span>
-          <nav className="review-pagination" aria-label="Review pages">
-            <button type="button" aria-label="Previous page">‹</button>
-            <button className="current" type="button" aria-current="page">1</button>
-            <button type="button">2</button>
-            <button type="button">3</button>
-            <button type="button" aria-label="Next page">›</button>
-          </nav>
-        </footer>
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalItems={allReviews.length}
+          pageSize={pagination.pageSize}
+          itemName="reviews"
+          onPageChange={pagination.goToPage}
+        />
       </section>
     </div>
   )
