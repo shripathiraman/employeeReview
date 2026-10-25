@@ -1,88 +1,89 @@
-from pydantic import ValidationError as PydanticValidationError
+import psycopg
+from fastapi import HTTPException
 
-from models import Employee, Review, ReviewCreate, ReviewPeriod, ReviewResponse
-from repository import (
-    get_employees,
-    get_review_by_id,
-    get_review_periods,
-    get_reviews,
-    submit_review as save_review,
-)
+import repository
 
 
-class ServiceError(Exception):
-    pass
-
-
-class NotFoundError(ServiceError):
-    pass
-
-
-class ValidationError(ServiceError):
-    pass
-
-
-class ConflictError(ServiceError):
-    pass
-
-
-def _calculate_average(quality, delivery, teamwork):
-    return round((quality + delivery + teamwork) / 3, 2)
-
-
-def _find_by_id(items, item_id):
-    for item in items:
-        if item.id == item_id:
-            return item
-    return None
-
-
-def list_employees():
-    return [Employee.model_validate(row) for row in get_employees()]
-
-
-def list_review_periods():
-    return [ReviewPeriod.model_validate(row) for row in get_review_periods()]
-
-
-def get_review_details(review_id):
-    return Review.model_validate(get_review_by_id(review_id))
-
-
-def list_reviews(employee_id=None, period_id=None):
-    """Return reviews in the API response shape, with optional filters."""
-    return [
-        Review.model_validate(row)
-        for row in get_reviews(employee_id=employee_id, period_id=period_id)
-    ]
-
-
-def submit_review(data):
-    try:
-        review = ReviewCreate.model_validate(data)
-    except PydanticValidationError as e:
-        raise ValidationError(str(e)) from e
-
-    if _find_by_id(list_employees(), review.employee_id) is None:
-        raise NotFoundError(f"Employee {review.employee_id} not found")
-
-    period = _find_by_id(list_review_periods(), review.period_id)
-    if period is None:
-        raise NotFoundError(f"Review period {review.period_id} not found")
-    if period.status != "Open":
-        raise ValidationError(f"Review period {period.name} is not open for reviews")
-
-    saved_review = save_review(
-        {
-            "employee_id": review.employee_id,
-            "period_id": review.period_id,
-            "quality_rating": review.quality_rating,
-            "delivery_rating": review.delivery_rating,
-            "teamwork_rating": review.teamwork_rating,
-            "average_rating": _calculate_average(
-                review.quality_rating, review.delivery_rating, review.teamwork_rating
-            ),
-            "comments": review.comments.strip(),
-        }
+def calculate_average_rating(review_data: dict) -> float:
+    """Calculate the average of the three performance ratings.
+    """
+    return round(
+        (
+            review_data["quality_rating"]
+            + review_data["delivery_rating"]
+            + review_data["teamwork_rating"]
+        )
+        / 3,
+        2,
     )
-    return ReviewResponse.model_validate(saved_review)
+
+
+def get_employees():
+    """Return employees or translate database failures to HTTP errors.
+    """
+    try:
+        return repository.list_employees()
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def get_review_periods():
+    """Return review periods or translate database failures to HTTP errors.
+    """
+    try:
+        return repository.list_review_periods()
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def get_reviews(
+    *, employee_id: int | None, period_id: int | None, limit: int, offset: int
+):
+    """Return filtered reviews with pagination support.
+    """
+    try:
+        return repository.list_reviews(
+            employee_id=employee_id,
+            period_id=period_id,
+            limit=limit,
+            offset=offset,
+        )
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def get_review(review_id: int):
+    """Return one review or raise an HTTP 404 when absent.
+    """
+    try:
+        review = repository.get_review(review_id)
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
+
+
+def submit_review(review_data: dict):
+    """Create a review and map database failures to HTTP errors.
+    """
+    review_data = {
+        **review_data,
+        "average_rating": calculate_average_rating(review_data),
+    }
+    try:
+        return repository.create_review(review_data)
+    except psycopg.errors.ForeignKeyViolation as exc:
+        raise HTTPException(
+            status_code=404, detail="Employee or review period was not found"
+        ) from exc
+    except psycopg.errors.UniqueViolation as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="This employee already has a review for that period",
+        ) from exc
+    except psycopg.errors.RaiseException as exc:
+        raise HTTPException(status_code=422, detail=str(exc.diag.message_primary)) from exc
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
