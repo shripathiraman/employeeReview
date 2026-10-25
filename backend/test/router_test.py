@@ -56,6 +56,17 @@ class RouterUnitTests(unittest.TestCase):
         "teamwork_rating": 4,
         "comments": "Strong collaboration",
     }
+    EMPLOYEE_REQUEST = {
+        "employee_id": "E002",
+        "name": "Grace Hopper",
+        "department": "Engineering",
+        "email": "grace@example.com",
+    }
+    REVIEW_PERIOD_REQUEST = {
+        "name": "2026 Annual Review",
+        "start_date": "2026-01-01",
+        "end_date": "2026-12-31",
+    }
 
     def setUp(self) -> None:
         """Prepare a client for the API router.
@@ -109,6 +120,17 @@ class RouterUnitTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"detail": "Database service is unavailable."})
 
+    def test_read_employee_returns_requested_employee(self) -> None:
+        """Tests router.read_employee.
+        Scenario: forwards an employee code and returns the matching employee.
+        """
+        with patch.object(router.services, "get_employee", return_value=self.EMPLOYEE) as get_employee:
+            response = self.client.get("/api/employees/E001")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), self.EMPLOYEE)
+        get_employee.assert_called_once_with("E001")
+
     def test_read_review_periods_returns_period_list(self) -> None:
         """Tests router.read_review_periods.
         Scenario: returns service results as review-period response objects.
@@ -131,6 +153,19 @@ class RouterUnitTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"detail": "Database service is unavailable."})
+
+    def test_read_review_period_returns_requested_period(self) -> None:
+        """Tests router.read_review_period.
+        Scenario: forwards a period ID and returns the matching period.
+        """
+        with patch.object(
+            router.services, "get_review_period", return_value=self.REVIEW_PERIOD
+        ) as get_review_period:
+            response = self.client.get("/api/review-periods/2")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), self.REVIEW_PERIOD)
+        get_review_period.assert_called_once_with(2)
 
     def test_read_reviews_uses_default_query_values(self) -> None:
         """Tests router.read_reviews.
@@ -293,6 +328,32 @@ class RouterUnitTests(unittest.TestCase):
                     response = self.client.post("/api/reviews", json=self.REVIEW_REQUEST)
                     self.assertEqual(response.status_code, error.status_code)
                     self.assertEqual(response.json(), {"detail": error.detail})
+
+    def test_save_employee_applies_default_status(self) -> None:
+        """Tests router.save_employee.
+        Scenario: validates an employee payload and supplies the Active default.
+        """
+        with patch.object(router.services, "upsert_employee", return_value=self.EMPLOYEE) as save_employee:
+            response = self.client.post("/api/employees", json=self.EMPLOYEE_REQUEST)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), self.EMPLOYEE)
+        save_employee.assert_called_once_with({**self.EMPLOYEE_REQUEST, "status": "Active"})
+
+    def test_save_review_period_rejects_reversed_dates(self) -> None:
+        """Tests router.save_review_period.
+        Scenario: rejects a period whose end date precedes its start date.
+        """
+        invalid_request = {
+            **self.REVIEW_PERIOD_REQUEST,
+            "start_date": "2026-12-31",
+            "end_date": "2026-01-01",
+        }
+        with patch.object(router.services, "upsert_review_period") as save_period:
+            response = self.client.post("/api/review-periods", json=invalid_request)
+
+        self.assertEqual(response.status_code, 422)
+        save_period.assert_not_called()
 
 
 if __name__ == "__main__":

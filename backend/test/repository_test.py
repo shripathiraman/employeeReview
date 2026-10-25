@@ -1,12 +1,11 @@
-"""Integration tests for the repository database operations."""
+"""Unit tests for repository database operations."""
 
-import os
 import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from dotenv import load_dotenv
+import psycopg
 from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -14,80 +13,83 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import repository
 
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+class RepositoryUnitTests(unittest.TestCase):
+    """Verify repository queries and database error translation without PostgreSQL."""
 
+    def mocked_connection(self):
+        connect = patch("repository._connect")
+        mock_connect = connect.start()
+        self.addCleanup(connect.stop)
+        connection = mock_connect.return_value.__enter__.return_value
+        cursor = connection.cursor.return_value.__enter__.return_value
+        return mock_connect, cursor
 
-class RepositoryIntegrationTests(unittest.TestCase):
-    """Run read-only repository checks against the configured database."""
+    def test_list_employees_returns_rows(self) -> None:
+        connect, cursor = self.mocked_connection()
+        rows = [{"id": 1, "employee_id": "E001"}]
+        cursor.fetchall.return_value = rows
 
-    @classmethod
-    def setUpClass(cls) -> None:
-        if not os.getenv("DATABASE_URL"):
-            raise unittest.SkipTest("DATABASE_URL is not configured")
+        self.assertEqual(repository.list_employees(), rows)
+        cursor.execute.assert_called_once()
+        connect.assert_called_once_with()
 
-    def test_list_employees(self) -> None:
-        employees = repository.list_employees()
+    def test_list_review_periods_returns_rows(self) -> None:
+        _, cursor = self.mocked_connection()
+        rows = [{"id": 2, "name": "2025 Annual Review"}]
+        cursor.fetchall.return_value = rows
 
-        self.assertIsInstance(employees, list)
-        if employees:
-            self.assertIn("id", employees[0])
-            self.assertIn("employee_id", employees[0])
+        self.assertEqual(repository.list_review_periods(), rows)
+        cursor.execute.assert_called_once()
 
-    def test_list_review_periods(self) -> None:
-        periods = repository.list_review_periods()
+    def test_list_reviews_builds_filters_and_pagination(self) -> None:
+        _, cursor = self.mocked_connection()
+        cursor.fetchall.return_value = [{"id": 3}]
 
-        self.assertIsInstance(periods, list)
-        if periods:
-            self.assertIn("id", periods[0])
-            self.assertIn("name", periods[0])
+        result = repository.list_reviews(employee_id=1, period_id=2, limit=10, offset=5)
 
-    def test_list_reviews_accepts_optional_filters(self) -> None:
-        reviews = repository.list_reviews()
+        self.assertEqual(result, [{"id": 3}])
+        query, values = cursor.execute.call_args.args
+        self.assertIn("pr.employee_id = %s", query)
+        self.assertIn("pr.period_id = %s", query)
+        self.assertEqual(values, [1, 2, 10, 5])
 
-        self.assertIsInstance(reviews, list)
-        if reviews:
-            self.assertIn("id", reviews[0])
-            self.assertIn("average_rating", reviews[0])
+    def test_get_review_returns_row_or_none(self) -> None:
+        _, cursor = self.mocked_connection()
+        cursor.fetchone.return_value = {"id": 4}
 
-    def test_get_review_returns_none_for_unknown_id(self) -> None:
-        review = repository.get_review(-1)
+        self.assertEqual(repository.get_review(4), {"id": 4})
+        cursor.execute.assert_called_once()
 
-        self.assertIsNone(review)
+        cursor.fetchone.return_value = None
+        self.assertIsNone(repository.get_review(99))
 
-    def test_repository_errors_are_http_exceptions(self) -> None:
-        original_url = os.environ.pop("DATABASE_URL", None)
-        try:
+    def test_create_review_inserts_and_reads_created_review(self) -> None:
+        _, cursor = self.mocked_connection()
+        cursor.fetchone.side_effect = [{"id": 5}, {"id": 5, "average_rating": 4.33}]
+        review = {
+            "employee_id": 1,
+            "period_id": 2,
+            "quality_rating": 4,
+            "delivery_rating": 5,
+            "teamwork_rating": 4,
+            "average_rating": 4.33,
+            "comments": "Good work",
+        }
+
+        result = repository.create_review(review)
+
+        self.assertEqual(result, {"id": 5, "average_rating": 4.33})
+        self.assertEqual(cursor.execute.call_count, 2)
+        insert_values = cursor.execute.call_args_list[0].args[1]
+        self.assertEqual(insert_values[-2:], (4.33, "Good work"))
+
+    def test_database_errors_are_translated(self) -> None:
+        with patch("repository._connect", side_effect=psycopg.OperationalError("offline")):
             with self.assertRaises(HTTPException) as raised:
                 repository.list_employees()
-            self.assertEqual(raised.exception.status_code, 503)
-        finally:
-            if original_url is not None:
-                os.environ["DATABASE_URL"] = original_url
 
-
-class RepositoryUnitTests(unittest.TestCase):
-    """Verify repository behavior without changing database data."""
-
-    @patch("repository._connect")
-    def test_create_review_passes_average_rating(self, connect):
-        connection = connect.return_value.__enter__.return_value
-        cursor = connection.cursor.return_value.__enter__.return_value
-        cursor.fetchone.side_effect = [{"id": 10}, {"id": 10}]
-
-        repository.create_review(
-            {
-                "employee_id": 1,
-                "period_id": 2,
-                "quality_rating": 4,
-                "delivery_rating": 5,
-                "teamwork_rating": 4,
-                "average_rating": 4.33,
-                "comments": "Good work",
-            }
-        )
-
-        insert_arguments = cursor.execute.call_args_list[0].args[1]
-        self.assertEqual(insert_arguments[5], 4.33)
+        self.assertEqual(raised.exception.status_code, 500)
+        self.assertEqual(raised.exception.detail, "Unable to retrieve employees.")
 
 
 if __name__ == "__main__":
