@@ -147,9 +147,9 @@ def create_review(review: dict[str, Any]) -> dict[str, Any]:
                     """
                     INSERT INTO performance_reviews (
                         employee_id, period_id, quality_rating,
-                        delivery_rating, teamwork_rating, comments
+                        delivery_rating, teamwork_rating, average_rating, comments
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                     """,
                     (
@@ -158,6 +158,7 @@ def create_review(review: dict[str, Any]) -> dict[str, Any]:
                         review["quality_rating"],
                         review["delivery_rating"],
                         review["teamwork_rating"],
+                        review["average_rating"],
                         review.get("comments"),
                     ),
                 )

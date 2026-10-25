@@ -4,6 +4,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -62,6 +63,31 @@ class RepositoryIntegrationTests(unittest.TestCase):
         finally:
             if original_url is not None:
                 os.environ["DATABASE_URL"] = original_url
+
+
+class RepositoryUnitTests(unittest.TestCase):
+    """Verify repository behavior without changing database data."""
+
+    @patch("repository._connect")
+    def test_create_review_passes_average_rating(self, connect):
+        connection = connect.return_value.__enter__.return_value
+        cursor = connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.side_effect = [{"id": 10}, {"id": 10}]
+
+        repository.create_review(
+            {
+                "employee_id": 1,
+                "period_id": 2,
+                "quality_rating": 4,
+                "delivery_rating": 5,
+                "teamwork_rating": 4,
+                "average_rating": 4.33,
+                "comments": "Good work",
+            }
+        )
+
+        insert_arguments = cursor.execute.call_args_list[0].args[1]
+        self.assertEqual(insert_arguments[5], 4.33)
 
 
 if __name__ == "__main__":
