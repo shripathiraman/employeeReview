@@ -41,8 +41,24 @@ export type CreateReview = {
   comments: string
 }
 
+export type EmployeeInput = {
+  employee_id: string
+  name: string
+  department: string | null
+  email: string | null
+  status: string
+}
+
 export function getEmployees() {
   return apiGet<Employee[]>('/employees')
+}
+
+export function getEmployee(employeeId: string) {
+  return apiGet<Employee>(`/employees/${encodeURIComponent(employeeId)}`)
+}
+
+export function saveEmployee(employee: EmployeeInput) {
+  return apiPost<EmployeeInput, Employee>('/employees', employee)
 }
 
 export function getReviewPeriods() {

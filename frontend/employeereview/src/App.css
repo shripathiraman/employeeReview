@@ -57,6 +57,20 @@ h1 { margin-bottom: 10px; color: #172b43; font-size: clamp(28px, 3vw, 42px); lin
   background: #fff;
   box-shadow: 0 2px 7px rgba(24, 56, 82, 0.08);
 }
+
+.review-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.review-list-header h2 {
+  margin: 0;
+  color: #172b43;
+  font-size: 22px;
+}
+
 .review-list-header h2 { margin: 0 0 20px; color: #172b43; font-size: 22px; }
 .review-filters { display: flex; align-items: end; gap: 18px; margin: 0 0 20px; }
 .review-filters label { display: grid; gap: 7px; min-width: 220px; }
@@ -154,12 +168,36 @@ h1 { margin-bottom: 10px; color: #172b43; font-size: clamp(28px, 3vw, 42px); lin
 .submit-review-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .submit-review-field { display: grid; gap: 8px; color: #293b50; font-size: 13px; font-weight: 650; }
 .submit-review-field em, .submit-review-ratings em { color: #d74343; font-style: normal; }
-.submit-review-field select, .submit-review-field textarea {
-  width: 100%; border: 1px solid #cfd8e3; border-radius: 7px; color: #253950; background: #fff; outline: none;
+.submit-review-field select,
+.submit-review-field textarea,
+.submit-review-field input {
+  width: 100%;
+  border: 1px solid #cfd8e3;
+  border-radius: 7px;
+  color: #253950;
+  background: #fff;
+  outline: none;
 }
-.submit-review-field select { min-height: 43px; padding: 0 12px; }
-.submit-review-field textarea { min-height: 132px; padding: 12px; resize: vertical; line-height: 1.5; }
-.submit-review-field select:focus, .submit-review-field textarea:focus { border-color: #1672d4; box-shadow: 0 0 0 3px rgb(22 114 212 / 14%); }
+
+.submit-review-field select,
+.submit-review-field input {
+  min-height: 43px;
+  padding: 0 12px;
+}
+
+.submit-review-field textarea {
+  min-height: 132px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.submit-review-field select:focus,
+.submit-review-field textarea:focus,
+.submit-review-field input:focus {
+  border-color: #1672d4;
+  box-shadow: 0 0 0 3px rgb(22 114 212 / 14%);
+}
 .submit-review-field select[aria-invalid="true"], .submit-review-field textarea[aria-invalid="true"] { border-color: #d74343; }
 .submit-review-field select[aria-invalid="true"]:focus, .submit-review-field textarea[aria-invalid="true"]:focus { border-color: #d74343; box-shadow: 0 0 0 3px rgb(215 67 67 / 14%); }
 .field-error { display: block; color: #d74343; font-size: 12px; font-weight: 600; }
@@ -192,7 +230,13 @@ h1 { margin-bottom: 10px; color: #172b43; font-size: clamp(28px, 3vw, 42px); lin
   .submit-review-card h1 { margin: -12px -16px 10px; padding: 9px 12px; border-bottom: 1px solid #edf0f4; font-size: 12px; }
   .submit-review-fields { gap: 10px; }
   .submit-review-field { gap: 5px; font-size: 9px; }
-  .submit-review-field select { min-height: 23px; padding: 0 6px; border-radius: 4px; font-size: 9px; }
+  .submit-review-field select,
+  .submit-review-field input {
+    min-height: 23px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 9px;
+  }
   .submit-review-ratings { gap: 7px; margin: 12px 0 18px; }
   .submit-review-ratings h2 { font-size: 9px; }
   .submit-review-rating-list { gap: 7px; }
