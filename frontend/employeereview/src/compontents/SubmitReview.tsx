@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import Rating from './Rating'
+import Ratings from './Ratings'
 
 const ratingCriteria = [
   { name: 'quality', label: 'Quality of Work' },
@@ -7,19 +7,19 @@ const ratingCriteria = [
   { name: 'teamwork', label: 'Teamwork & Collaboration' },
 ] as const
 
-type Ratings = Record<(typeof ratingCriteria)[number]['name'], number>
+type RatingValues = Record<(typeof ratingCriteria)[number]['name'], number>
 
-const initialRatings: Ratings = {
+const initialRatings: RatingValues = {
   quality: 0,
   delivery: 0,
   teamwork: 0,
 }
 
 function SubmitReview() {
-  const [ratings, setRatings] = useState<Ratings>(initialRatings)
+  const [ratings, setRatings] = useState<RatingValues>(initialRatings)
   const [comments, setComments] = useState('')
 
-  const updateRating = (name: keyof Ratings, rating: number) => {
+  const updateRating = (name: keyof RatingValues, rating: number) => {
     setRatings((currentRatings) => ({ ...currentRatings, [name]: rating }))
   }
 
@@ -57,18 +57,17 @@ function SubmitReview() {
 
         <div className="submit-review-ratings">
           <h2>Performance Ratings (1 - 5) <em>*</em></h2>
-          <div className="submit-review-rating-list">
-            {ratingCriteria.map((criterion) => (
-              <div className="submit-review-rating-row" key={criterion.name}>
-                <span>{criterion.label} <em>*</em></span>
-                <Rating
-                  label={`${criterion.label} rating`}
-                  value={ratings[criterion.name]}
-                  onChange={(rating) => updateRating(criterion.name, rating)}
-                />
-              </div>
-            ))}
-          </div>
+          <Ratings
+            ratings={ratingCriteria.map((criterion) => ({
+              label: criterion.label,
+              rating: ratings[criterion.name],
+            }))}
+            editable
+            onRatingChange={(label, rating) => {
+              const criterion = ratingCriteria.find((item) => item.label === label)
+              if (criterion) updateRating(criterion.name, rating)
+            }}
+          />
         </div>
 
         <label className="submit-review-field submit-review-comments">
