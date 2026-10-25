@@ -49,6 +49,14 @@ export type EmployeeInput = {
   status: string
 }
 
+export type ReviewPeriodInput = {
+  id?: number
+  name: string
+  start_date: string
+  end_date: string
+  status: string
+}
+
 export function getEmployees() {
   return apiGet<Employee[]>('/employees')
 }
@@ -63,6 +71,14 @@ export function saveEmployee(employee: EmployeeInput) {
 
 export function getReviewPeriods() {
   return apiGet<ReviewPeriod[]>('/review-periods')
+}
+
+export function getReviewPeriod(periodId: number) {
+  return apiGet<ReviewPeriod>(`/review-periods/${periodId}`)
+}
+
+export function saveReviewPeriod(period: ReviewPeriodInput) {
+  return apiPost<ReviewPeriodInput, ReviewPeriod>('/review-periods', period)
 }
 
 export function getReviews(employeeId?: number, periodId?: number) {

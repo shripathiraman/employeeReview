@@ -4,6 +4,7 @@ import ReviewDetail, { type Review } from './compontents/ReviewDetail'
 import ReviewList from './compontents/ReviewList'
 import SubmitReview from './compontents/SubmitReview'
 import Employees from './compontents/Employees'
+import ReviewPeriods from './compontents/ReviewPeriods'
 import './App.css'
 
 function App() {
@@ -30,7 +31,9 @@ function App() {
           <SubmitReview />
         ) : activeMenu === 'Reviews' ? (
           selectedReview ? <ReviewDetail review={selectedReview} onBack={() => setSelectedReview(null)} /> : <ReviewList onView={setSelectedReview} />
-        ) : activeMenu === 'Employees' ? (
+        ) : activeMenu === 'Review Period' ? (
+          <ReviewPeriods />
+        ): activeMenu === 'Employees' ? (
             <Employees />
         ) : (
           <section className="content-card" aria-labelledby="content-title">
