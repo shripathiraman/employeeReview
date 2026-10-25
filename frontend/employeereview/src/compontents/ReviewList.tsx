@@ -1,10 +1,7 @@
-type Review = {
-  employeeId: string
-  employeeName: string
-  period: string
-  ratings: string
-  average: string
-  status: 'Completed' | 'Pending'
+import type { Review } from './ReviewDetail'
+
+type ReviewListProps = {
+  onView: (review: Review) => void
 }
 
 const reviews: Review[] = [
@@ -15,7 +12,7 @@ const reviews: Review[] = [
   { employeeId: 'EMP101', employeeName: 'John Smith', period: 'H2 2025', ratings: '4, 4, 5', average: '4.3', status: 'Completed' },
 ]
 
-function ReviewList() {
+function ReviewList({ onView }: ReviewListProps) {
   return (
     <div className="reviews-page">
       <div className="review-filters" aria-label="Review filters">
@@ -69,7 +66,7 @@ function ReviewList() {
                   <td>{review.ratings}</td>
                   <td>{review.average}</td>
                   <td><span className={`review-status ${review.status.toLowerCase()}`}>{review.status}</span></td>
-                  <td><button className="review-view-button" type="button">View</button></td>
+                  <td><button className="review-view-button" type="button" onClick={() => onView(review)}>View</button></td>
                 </tr>
               ))}
             </tbody>

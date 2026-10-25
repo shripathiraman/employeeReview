@@ -15,6 +15,32 @@ const initialRatings: RatingValues = {
   teamwork: 0,
 }
 
+function RatingStars({
+  rating,
+  onRatingChange,
+}: {
+  rating: number
+  onRatingChange: (rating: number) => void
+}) {
+  return (
+    <div className="rating-stars" role="radiogroup" aria-label="Rating">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          className={`rating-star ${star <= rating ? 'filled' : 'empty'}`}
+          aria-label={`${star} star${star === 1 ? '' : 's'}`}
+          aria-checked={star === rating}
+          role="radio"
+          onClick={() => onRatingChange(star)}
+        >
+          {'\u2605'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function SubmitReview() {
   const [ratings, setRatings] = useState<RatingValues>(initialRatings)
   const [comments, setComments] = useState('')
@@ -57,17 +83,26 @@ function SubmitReview() {
 
         <div className="submit-review-ratings">
           <h2>Performance Ratings (1 - 5) <em>*</em></h2>
-          <Ratings
-            ratings={ratingCriteria.map((criterion) => ({
-              label: criterion.label,
-              rating: ratings[criterion.name],
-            }))}
-            editable
-            onRatingChange={(label, rating) => {
-              const criterion = ratingCriteria.find((item) => item.label === label)
-              if (criterion) updateRating(criterion.name, rating)
-            }}
-          />
+          <div className="submit-review-rating-list">
+            <div className="submit-review-rating-row">
+              <span>Quality of Work</span>
+              <Ratings
+                rating={ratings.quality}
+                editable
+                onRatingChange={(rating) => updateRating('quality', rating)}
+              />
+            </div>
+
+            {ratingCriteria.slice(1).map((criterion) => (
+              <div className="submit-review-rating-row" key={criterion.name}>
+                <span>{criterion.label}</span>
+                <RatingStars
+                  rating={ratings[criterion.name]}
+                  onRatingChange={(rating) => updateRating(criterion.name, rating)}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         <label className="submit-review-field submit-review-comments">
