@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Navigation from './compontents/Navigation'
+import ReviewList from './compontents/ReviewList'
 import './App.css'
 
 function App() {
@@ -16,10 +17,14 @@ function App() {
             Manage employee performance reviews from one place.
           </p>
         </header>
-        <section className="content-card" aria-labelledby="content-title">
-          <h2 id="content-title">{activeMenu}</h2>
-          <p>Select an option from the navigation menu to get started.</p>
-        </section>
+        {activeMenu === 'Reviews' ? (
+          <ReviewList />
+        ) : (
+          <section className="content-card" aria-labelledby="content-title">
+            <h2 id="content-title">{activeMenu}</h2>
+            <p>Select an option from the navigation menu to get started.</p>
+          </section>
+        )}
       </main>
     </div>
   )
