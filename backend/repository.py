@@ -179,3 +179,59 @@ def create_review(review: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to create the review.",
         ) from exc
+
+
+def get_employee(employee_id: str) -> dict[str, Any] | None:
+    """Find one employee using their employee code."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, employee_id, name, department, email, status
+                    FROM employees
+                    WHERE employee_id = %s
+                    """,
+                    (employee_id,),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve employee.",
+        ) from exc
+
+
+def upsert_employee(employee: dict[str, Any]) -> dict[str, Any]:
+    """Insert a new employee or update the employee with the same code."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO employees (
+                        employee_id, name, department, email, status
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (employee_id) DO UPDATE
+                    SET
+                        name = EXCLUDED.name,
+                        department = EXCLUDED.department,
+                        email = EXCLUDED.email,
+                        status = EXCLUDED.status
+                    RETURNING id, employee_id, name, department, email, status
+                    """,
+                    (
+                        employee["employee_id"],
+                        employee["name"],
+                        employee["department"],
+                        employee["email"],
+                        employee["status"],
+                    ),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save employee.",
+        ) from exc

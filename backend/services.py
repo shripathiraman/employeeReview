@@ -87,3 +87,21 @@ def submit_review(review_data: dict):
         raise HTTPException(status_code=422, detail=str(exc.diag.message_primary)) from exc
     except (psycopg.OperationalError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+def get_employee(employee_id: str):
+    """Return one employee or raise a 404 error if they do not exist."""
+    employee = repository.get_employee(employee_id)
+
+    if employee is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    return employee
+
+
+def upsert_employee(employee_data: dict):
+    """Insert or update an employee."""
+    try:
+        return repository.upsert_employee(employee_data)
+    except (psycopg.OperationalError, RuntimeError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

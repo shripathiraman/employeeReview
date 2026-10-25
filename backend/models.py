@@ -57,3 +57,16 @@ class ReviewResponse(BaseModel):
     average_rating: float
     comments: str | None = None
     created_at: datetime
+
+
+class EmployeeUpsert(BaseModel):
+    """
+    Employee Model containing the submitted employee data
+    """
+    employee_id: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=100)
+    department: str | None = Field(default=None, max_length=100)
+    email: str | None = Field(default=None, max_length=100)
+    status: str = Field(default="Active", max_length=20)
+
+

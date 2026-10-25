@@ -3,6 +3,7 @@ from fastapi import APIRouter, Query, status
 import services
 from models import (
     EmployeeResponse,
+    EmployeeUpsert,
     ReviewCreate,
     ReviewPeriodResponse,
     ReviewResponse,
@@ -63,3 +64,21 @@ def read_review(review_id: int):
 )
 def create_review(review: ReviewCreate):
     return services.submit_review(review.model_dump())
+
+
+@router.get(
+    "/employees/{employee_id}",
+    response_model=EmployeeResponse,
+    tags=["Employees"],
+)
+def read_employee(employee_id: str):
+    return services.get_employee(employee_id)
+
+
+@router.post(
+    "/employees",
+    response_model=EmployeeResponse,
+    tags=["Employees"],
+)
+def save_employee(employee: EmployeeUpsert):
+    return services.upsert_employee(employee.model_dump())
