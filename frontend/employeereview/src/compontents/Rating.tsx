@@ -47,7 +47,7 @@ function Rating({ value, onChange, disabled = false, label = 'Rating' }: RatingP
               lineHeight: 1,
             }}
           >
-            ★
+            {'\u2605'}
           </button>
         )
       })}

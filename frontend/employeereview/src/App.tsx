@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Navigation from './compontents/Navigation'
 import ReviewList from './compontents/ReviewList'
+import SubmitReview from './compontents/SubmitReview'
 import './App.css'
 
 function App() {
@@ -17,7 +18,9 @@ function App() {
             Manage employee performance reviews from one place.
           </p>
         </header>
-        {activeMenu === 'Reviews' ? (
+        {activeMenu === 'Submit Review' ? (
+          <SubmitReview />
+        ) : activeMenu === 'Reviews' ? (
           <ReviewList />
         ) : (
           <section className="content-card" aria-labelledby="content-title">
