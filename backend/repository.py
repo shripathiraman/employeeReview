@@ -1,9 +1,6 @@
-
-from http.client import HTTPException
-from select import select
-from tkinter import INSERT
-from fastapi import HTTPException, Query
+from fastapi import HTTPException
 from database import get_database_connection
+
 
 
 def get_employees():
@@ -14,7 +11,6 @@ def get_employees():
         list: A list of dictionaries representing employees.
     """
     try:
-        from database import get_database_connection
         with get_database_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT * FROM employees;")
