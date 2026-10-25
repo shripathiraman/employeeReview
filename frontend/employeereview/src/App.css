@@ -11,12 +11,14 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button { font: inherit; }
-#root { min-height: 100vh; }
 
-.app-shell { display: flex; min-height: 100vh; width: 100%; }
+.app-shell { display: flex; min-height: 100vh; }
 .navigation {
-  flex: 0 0 25%; width: 25%; min-height: 100vh; padding: 24px 14px;
-  color: #dce9f7; background: linear-gradient(180deg, #123554 0%, #0b263f 100%);
+  flex: 0 0 25%;
+  min-height: 100vh;
+  padding: 24px 14px;
+  color: #dce9f7;
+  background: linear-gradient(180deg, #123554 0%, #0b263f 100%);
 }
 .brand { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 13px 28px; color: #fff; }
 .brand-mark { display: grid; width: 25px; height: 25px; place-items: center; color: #20b978; font-size: 21px; }
