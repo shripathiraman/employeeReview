@@ -57,6 +57,26 @@ def get_reviews(review_data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def get_all_reviews(employee_id: int | None = None, period_id: int | None = None):
+    """
+    Fetch performance reviews, optionally filtered by employee_id and/or period_id.
+    """
+    try:
+        from database import get_database_connection
+        with get_database_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM performance_reviews "
+                    "WHERE (%s::int IS NULL OR employee_id = %s) "
+                    "AND (%s::int IS NULL OR period_id = %s);",
+                    (employee_id, employee_id, period_id, period_id),
+                )
+                rows = cur.fetchall()
+                columns = [desc[0] for desc in cur.description]
+                return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 def get_review_by_id(review_id: int):
     """
     Fetch a specific review by its ID from the database.

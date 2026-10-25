@@ -2,6 +2,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from models import Employee, ReviewCreate, ReviewPeriod
 from repository import (
+    get_all_reviews,
     get_employees,
     get_review_by_id,
     get_review_periods,
@@ -42,6 +43,10 @@ def list_employees():
 
 def list_review_periods():
     return [ReviewPeriod.model_validate(row) for row in get_review_periods()]
+
+
+def list_reviews(employee_id=None, period_id=None):
+    return get_all_reviews(employee_id=employee_id, period_id=period_id)
 
 
 def get_review_details(review_id):
