@@ -1,6 +1,6 @@
 from pydantic import ValidationError as PydanticValidationError
 
-from models import Employee, Review, ReviewCreate, ReviewPeriod
+from models import Employee, Review, ReviewCreate, ReviewPeriod, ReviewResponse
 from repository import (
     get_employees,
     get_review_by_id,
@@ -72,7 +72,7 @@ def submit_review(data):
     if period.status != "Open":
         raise ValidationError(f"Review period {period.name} is not open for reviews")
 
-    return save_review(
+    saved_review = save_review(
         {
             "employee_id": review.employee_id,
             "period_id": review.period_id,
@@ -85,3 +85,4 @@ def submit_review(data):
             "comments": review.comments.strip(),
         }
     )
+    return ReviewResponse.model_validate(saved_review)

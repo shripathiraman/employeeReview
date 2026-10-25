@@ -122,10 +122,19 @@ def submit_review(review_data: dict):
         from database import get_database_connection
         with get_database_connection() as conn:
             with conn.cursor() as cur:
+                # Return the row created by this request.  The old implementation
+                # discarded the generated id and created_at values and returned
+                # only a success message.
                 cur.execute(
                     """
-                    INSERT INTO performance_reviews (employee_id, period_id, quality_rating, delivery_rating, teamwork_rating, average_rating, comments)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s);
+                    INSERT INTO performance_reviews (
+                        employee_id, period_id, quality_rating, delivery_rating,
+                        teamwork_rating, average_rating, comments
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, employee_id, period_id, quality_rating,
+                              delivery_rating, teamwork_rating, average_rating,
+                              comments, created_at;
                     """,
                     (
                         review_data["employee_id"],
@@ -134,10 +143,12 @@ def submit_review(review_data: dict):
                         review_data["delivery_rating"],
                         review_data["teamwork_rating"],
                         review_data["average_rating"],
-                        review_data["comments"]
-                    )
+                        review_data["comments"],
+                    ),
                 )
+                row = cur.fetchone()
                 conn.commit()
-                return {"message": "Review submitted successfully."}
+                columns = [desc[0] for desc in cur.description]
+                return dict(zip(columns, row))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

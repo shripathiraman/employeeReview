@@ -109,15 +109,29 @@ class ReviewCreate(BaseModel):
     model_config = {"extra": "forbid"}   # Reject unknown fields (matches OpenAPI additionalProperties: false)
 
 
-# ── Review (Full Response from GET /reviews & POST /reviews) ──────────────────
+# ── Review response for POST /reviews ─────────────────────────────────────────
+
+class ReviewResponse(BaseModel):
+    """The review row created by POST /reviews."""
+    id: int = Field(..., ge=1)
+    employee_id: int = Field(..., ge=1)
+    period_id: int = Field(..., ge=1)
+    quality_rating: int = Field(..., ge=1, le=5)
+    delivery_rating: int = Field(..., ge=1, le=5)
+    teamwork_rating: int = Field(..., ge=1, le=5)
+    average_rating: float = Field(..., ge=1.0, le=5.0)
+    comments: str = Field(..., min_length=1)
+    created_at: datetime
+
+
+# ── Review (Full Response from GET /reviews) ───────────────────────────────────
 
 class Review(BaseModel):
     """
     Stored performance review — enriched with employee/period labels.
     Returned by:
-      GET  /reviews          (list)
-      GET  /reviews/{id}     (detail)
-      POST /reviews          (201 Created)
+      GET /reviews          (list)
+      GET /reviews/{id}     (detail)
 
     Notes:
     - average_rating is server-calculated: ROUND((quality + delivery + teamwork) / 3, 2)

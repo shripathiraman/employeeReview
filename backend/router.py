@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from models import ReviewCreate
+from models import ReviewCreate, ReviewResponse
 from service import (
     ConflictError,
     NotFoundError,
@@ -58,6 +58,7 @@ def get_review(review_id: int):
     "/reviews",
     tags=["Reviews"],
     status_code=status.HTTP_201_CREATED,
+    response_model=ReviewResponse,
 )
 def create_review(review: ReviewCreate):
     try:
