@@ -9,6 +9,7 @@ const menuItems = [
   { label: 'Submit Review', icon: '▣' },
   { label: 'Reviews', icon: '✓' },
   { label: 'Employees', icon: '♙' },
+  { label: 'Review Period', icon: '♙'}
 ]
 
 function Navigation({ activeMenu, onMenuSelect }: NavigationProps) {

@@ -1,58 +1,55 @@
-
 type PaginationProps = {
   currentPage: number
-  totalPages: number
+  totalItems: number
+  pageSize: number
+  itemName?: string
   onPageChange: (page: number) => void
 }
 
-function Pagination({
+export default function Pagination({
   currentPage,
-  totalPages,
+  totalItems,
+  pageSize,
+  itemName = 'items',
   onPageChange,
 }: PaginationProps) {
-  if (totalPages <= 1) {
-    return null
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const lastItem = Math.min(currentPage * pageSize, totalItems)
+
+  // Show up to three page numbers, with the current page near the middle.
+  const firstVisiblePage = Math.max(1, Math.min(currentPage - 1, totalPages - 2))
+  const lastVisiblePage = Math.min(totalPages, firstVisiblePage + 2)
+  const visiblePages = Array.from(
+    { length: Math.max(0, lastVisiblePage - firstVisiblePage + 1) },
+    (_, index) => firstVisiblePage + index,
+  )
+
+  const changePage = (page: number) => {
+    if (page >= 1 && page <= totalPages) onPageChange(page)
   }
 
-  const pages = Array.from(
-    { length: totalPages },
-    (_, index) => index + 1
-  )
-
   return (
-    <nav className="review-pagination" aria-label="Review pages">
-      <button
-        type="button"
-        aria-label="Previous page"
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-      >
-        &lsaquo;
-      </button>
-
-      {pages.map((page) => (
-        <button
-          key={page}
-          type="button"
-          className={currentPage === page ? 'current' : ''}
-          aria-current={currentPage === page ? 'page' : undefined}
-          disabled={currentPage === page}
-          onClick={() => onPageChange(page)}
-        >
-          {page}
-        </button>
-      ))}
-
-      <button
-        type="button"
-        aria-label="Next page"
-        disabled={currentPage === totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-      >
-        &rsaquo;
-      </button>
-    </nav>
+    <footer className="review-list-footer">
+      <span>Showing {firstItem} to {lastItem} of {totalItems} {itemName}</span>
+      <nav className="review-pagination" aria-label="Pagination">
+        <button type="button" aria-label="First page" disabled={currentPage <= 1} onClick={() => changePage(1)}>«</button>
+        <button type="button" aria-label="Previous page" disabled={currentPage <= 1} onClick={() => changePage(currentPage - 1)}>‹</button>
+        {visiblePages.map((page) => (
+          <button
+            type="button"
+            key={page}
+            className={page === currentPage ? 'current' : undefined}
+            aria-current={page === currentPage ? 'page' : undefined}
+            aria-label={`Page ${page}`}
+            onClick={() => changePage(page)}
+          >
+            {page}
+          </button>
+        ))}
+        <button type="button" aria-label="Next page" disabled={currentPage >= totalPages} onClick={() => changePage(currentPage + 1)}>›</button>
+        <button type="button" aria-label="Last page" disabled={currentPage >= totalPages} onClick={() => changePage(totalPages)}>»</button>
+      </nav>
+    </footer>
   )
 }
-
-export default Pagination

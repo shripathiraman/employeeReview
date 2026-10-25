@@ -1,7 +1,5 @@
 fastapi
 uvicorn[standard]
-pandas
-requests
-psycopg2-binary
+psycopg[binary]
 python-dotenv
 email-validator

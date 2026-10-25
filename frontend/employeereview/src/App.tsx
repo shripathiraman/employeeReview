@@ -1,15 +1,24 @@
 import { useState } from 'react'
 import Navigation from './compontents/Navigation'
+import ReviewDetail, { type Review } from './compontents/ReviewDetail'
 import ReviewList from './compontents/ReviewList'
 import SubmitReview from './compontents/SubmitReview'
+import Employees from './compontents/Employees'
+import ReviewPeriods from './compontents/ReviewPeriods'
 import './App.css'
 
 function App() {
   const [activeMenu, setActiveMenu] = useState('Submit Review')
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+
+  const handleMenuSelect = (menu: string) => {
+    setActiveMenu(menu)
+    setSelectedReview(null)
+  }
 
   return (
     <div className="app-shell">
-      <Navigation activeMenu={activeMenu} onMenuSelect={setActiveMenu} />
+      <Navigation activeMenu={activeMenu} onMenuSelect={handleMenuSelect} />
       <main className="app-content">
         <header className="content-header">
           <p className="eyebrow">Performance Reviews</p>
@@ -21,7 +30,11 @@ function App() {
         {activeMenu === 'Submit Review' ? (
           <SubmitReview />
         ) : activeMenu === 'Reviews' ? (
-          <ReviewList />
+          selectedReview ? <ReviewDetail review={selectedReview} onBack={() => setSelectedReview(null)} /> : <ReviewList onView={setSelectedReview} />
+        ) : activeMenu === 'Review Period' ? (
+          <ReviewPeriods />
+        ): activeMenu === 'Employees' ? (
+            <Employees />
         ) : (
           <section className="content-card" aria-labelledby="content-title">
             <h2 id="content-title">{activeMenu}</h2>

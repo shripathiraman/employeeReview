@@ -1,154 +1,314 @@
-from fastapi import HTTPException
-from database import get_database_connection
+import os
+from typing import Any
+
+import psycopg
+from fastapi import HTTPException, status
+from dotenv import load_dotenv
+from psycopg.rows import dict_row
 
 
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-def get_employees():
+
+def _connect() -> psycopg.Connection:
+    """Open a PostgreSQL connection for repository operations.
     """
-    Fetch all employees from the database.
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database configuration is unavailable.",
+        )
+    try:
+        return psycopg.connect(database_url, row_factory=dict_row)
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service is unavailable.",
+        ) from exc
 
-    Returns:
-        list: A list of dictionaries representing employees.
+
+def list_employees() -> list[dict[str, Any]]:
+    """Return all employees ordered by their database identifier.
     """
     try:
-        with get_database_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM employees;")
-                rows = cur.fetchall()
-                columns = [desc[0] for desc in cur.description]
-                employees = [dict(zip(columns, row)) for row in rows]
-                return employees
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-def get_review_periods():
-    """
-    Fetch all review periods from the database.
-
-    Returns:
-        list: A list of dictionaries representing review periods.
-    """
-    try:
-        from database import get_database_connection
-        with get_database_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM review_periods;")
-                rows = cur.fetchall()
-                columns = [desc[0] for desc in cur.description]
-                review_periods = [dict(zip(columns, row)) for row in rows]
-                return review_periods
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-def get_reviews(employee_id: int | None = None, period_id: int | None = None):
-    """Fetch enriched performance reviews, optionally filtered by employee/period."""
-    try:
-        from database import get_database_connection
-        with get_database_connection() as conn:
-            with conn.cursor() as cur:
-                query = """
-                    SELECT
-                        r.id, r.employee_id, e.employee_id AS employee_code,
-                        e.name AS employee_name, r.period_id, p.name AS period_name,
-                        r.quality_rating, r.delivery_rating, r.teamwork_rating,
-                        r.average_rating, r.comments, r.created_at
-                    FROM performance_reviews AS r
-                    JOIN employees AS e ON e.id = r.employee_id
-                    JOIN review_periods AS p ON p.id = r.period_id
-                """
-                filters = []
-                values = []
-                if employee_id is not None:
-                    filters.append("r.employee_id = %s")
-                    values.append(employee_id)
-                if period_id is not None:
-                    filters.append("r.period_id = %s")
-                    values.append(period_id)
-                if filters:
-                    query += " WHERE " + " AND ".join(filters)
-                query += " ORDER BY r.created_at DESC, r.id DESC;"
-                cur.execute(query, values)
-                rows = cur.fetchall()
-                columns = [desc[0] for desc in cur.description]
-                reviews = [dict(zip(columns, row)) for row in rows]
-                return reviews
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-def get_review_by_id(review_id: int):
-    """
-    Fetch a specific review by its ID from the database.
-
-    Args:
-        review_id (int): The ID of the review to fetch."""
-    try:
-        from database import get_database_connection
-        with get_database_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
                     """
-                    SELECT
-                        r.id, r.employee_id, e.employee_id AS employee_code,
-                        e.name AS employee_name, r.period_id, p.name AS period_name,
-                        r.quality_rating, r.delivery_rating, r.teamwork_rating,
-                        r.average_rating, r.comments, r.created_at
-                    FROM performance_reviews AS r
-                    JOIN employees AS e ON e.id = r.employee_id
-                    JOIN review_periods AS p ON p.id = r.period_id
-                    WHERE r.id = %s;
-                    """,
-                    (review_id,),
+                    SELECT id, employee_id, name, department, email, status
+                    FROM employees
+                    ORDER BY id
+                    """
                 )
-                row = cur.fetchone()
-                if row is None:
-                    raise ValueError(f"Review with ID {review_id} not found.")
-                columns = [desc[0] for desc in cur.description]
-                review = dict(zip(columns, row))
-                return review
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                return list(cursor.fetchall())
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve employees.",
+        ) from exc
 
-def submit_review(review_data: dict):
-    """
-    Submit a new performance review to the database.
 
-    Args:
-        review_data (dict): A dictionary containing the review data.
+def list_review_periods() -> list[dict[str, Any]]:
+    """Return review periods ordered from newest to oldest.
     """
     try:
-        from database import get_database_connection
-        with get_database_connection() as conn:
-            with conn.cursor() as cur:
-                # Return the row created by this request.  The old implementation
-                # discarded the generated id and created_at values and returned
-                # only a success message.
-                cur.execute(
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name, start_date, end_date, status
+                    FROM review_periods
+                    ORDER BY start_date DESC, id DESC
+                    """
+                )
+                return list(cursor.fetchall())
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve review periods.",
+        ) from exc
+
+
+_REVIEW_SELECT = """
+    SELECT
+        pr.id,
+        pr.employee_id,
+        e.name AS employee_name,
+        pr.period_id,
+        rp.name AS period_name,
+        pr.quality_rating,
+        pr.delivery_rating,
+        pr.teamwork_rating,
+        pr.average_rating::double precision AS average_rating,
+        pr.comments,
+        pr.created_at
+    FROM performance_reviews AS pr
+    JOIN employees AS e ON e.id = pr.employee_id
+    JOIN review_periods AS rp ON rp.id = pr.period_id
+"""
+
+
+def list_reviews(
+    *,
+    employee_id: int | None = None,
+    period_id: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """Return filtered reviews using pagination parameters.
+    """
+    conditions: list[str] = []
+    values: list[Any] = []
+
+    if employee_id is not None:
+        conditions.append("pr.employee_id = %s")
+        values.append(employee_id)
+    if period_id is not None:
+        conditions.append("pr.period_id = %s")
+        values.append(period_id)
+
+    query = _REVIEW_SELECT
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    query += " ORDER BY pr.created_at DESC, pr.id DESC LIMIT %s OFFSET %s"
+    values.extend((limit, offset))
+
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, values)
+                return list(cursor.fetchall())
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve reviews.",
+        ) from exc
+
+
+def get_review(review_id: int) -> dict[str, Any] | None:
+    """Return one review by identifier, or None when it does not exist.
+    """
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(_REVIEW_SELECT + " WHERE pr.id = %s", (review_id,))
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve the review.",
+        ) from exc
+
+
+def create_review(review: dict[str, Any]) -> dict[str, Any]:
+    """Create a review and return the persisted review record.
+    """
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
                     """
                     INSERT INTO performance_reviews (
-                        employee_id, period_id, quality_rating, delivery_rating,
-                        teamwork_rating, average_rating, comments
+                        employee_id, period_id, quality_rating,
+                        delivery_rating, teamwork_rating, average_rating, comments
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, employee_id, period_id, quality_rating,
-                              delivery_rating, teamwork_rating, average_rating,
-                              comments, created_at;
+                    RETURNING id
                     """,
                     (
-                        review_data["employee_id"],
-                        review_data["period_id"],
-                        review_data["quality_rating"],
-                        review_data["delivery_rating"],
-                        review_data["teamwork_rating"],
-                        review_data["average_rating"],
-                        review_data["comments"],
+                        review["employee_id"],
+                        review["period_id"],
+                        review["quality_rating"],
+                        review["delivery_rating"],
+                        review["teamwork_rating"],
+                        review["average_rating"],
+                        review.get("comments"),
                     ),
                 )
-                row = cur.fetchone()
-                conn.commit()
-                columns = [desc[0] for desc in cur.description]
-                return dict(zip(columns, row))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                new_id = cursor.fetchone()["id"]
+                cursor.execute(_REVIEW_SELECT + " WHERE pr.id = %s", (new_id,))
+                return cursor.fetchone()
+    except psycopg.errors.UniqueViolation as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A review already exists for this employee and period.",
+        ) from exc
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create the review.",
+        ) from exc
+
+
+def get_employee(employee_id: str) -> dict[str, Any] | None:
+    """Find one employee using their employee code."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, employee_id, name, department, email, status
+                    FROM employees
+                    WHERE employee_id = %s
+                    """,
+                    (employee_id,),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve employee.",
+        ) from exc
+
+
+def upsert_employee(employee: dict[str, Any]) -> dict[str, Any]:
+    """Insert a new employee or update the employee with the same code."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO employees (
+                        employee_id, name, department, email, status
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (employee_id) DO UPDATE
+                    SET
+                        name = EXCLUDED.name,
+                        department = EXCLUDED.department,
+                        email = EXCLUDED.email,
+                        status = EXCLUDED.status
+                    RETURNING id, employee_id, name, department, email, status
+                    """,
+                    (
+                        employee["employee_id"],
+                        employee["name"],
+                        employee["department"],
+                        employee["email"],
+                        employee["status"],
+                    ),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save employee.",
+        ) from exc
+
+
+def get_review_period(period_id: str) -> dict[str, Any] | None:
+    """Find one Review Period using their Period id"""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, name, start_date, end_date, status
+                    FROM review_periods
+                    WHERE id = %s
+                    """,
+                    (period_id,),
+                )
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve review period.",
+        ) from exc
+
+
+def upsert_review_period(period: dict[str, Any]) -> dict[str, Any]:
+    """Insert a period when id is absent, or update it when id is present."""
+    try:
+        with _connect() as connection:
+            with connection.cursor() as cursor:
+                if period["id"] is None:
+                    cursor.execute(
+                        """
+                        INSERT INTO review_periods (name, start_date, end_date, status)
+                        VALUES (%s, %s, %s, %s)
+                        RETURNING id, name, start_date, end_date, status
+                        """,
+                        (
+                            period["name"],
+                            period["start_date"],
+                            period["end_date"],
+                            period["status"],
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        UPDATE review_periods
+                        SET name = %s,
+                            start_date = %s,
+                            end_date = %s,
+                            status = %s
+                        WHERE id = %s
+                        RETURNING id, name, start_date, end_date, status
+                        """,
+                        (
+                            period["name"],
+                            period["start_date"],
+                            period["end_date"],
+                            period["status"],
+                            period["id"],
+                        ),
+                    )
+
+                    saved_period = cursor.fetchone()
+                    if saved_period is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Review period not found.",
+                        )
+                    return saved_period
+
+                return cursor.fetchone()
+    except psycopg.Error as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save review period.",
+        ) from exc
+
